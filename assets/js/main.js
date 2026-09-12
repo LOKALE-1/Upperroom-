@@ -107,6 +107,36 @@ document.addEventListener('DOMContentLoaded', function () {
     });
   }
 
+  /* Copy-to-clipboard (bank details) */
+  document.querySelectorAll('.copy-btn').forEach(function (btn) {
+    var defaultHTML = btn.innerHTML;
+    var checkHTML = '<svg viewBox="0 0 24 24" fill="none"><path d="M5 12.5l4.5 4.5L19 7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+    btn.addEventListener('click', function () {
+      var text = btn.getAttribute('data-copy') || '';
+      function markCopied () {
+        btn.classList.add('copied');
+        btn.innerHTML = checkHTML;
+        setTimeout(function () {
+          btn.classList.remove('copied');
+          btn.innerHTML = defaultHTML;
+        }, 1600);
+      }
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(markCopied, markCopied);
+      } else {
+        var ta = document.createElement('textarea');
+        ta.value = text;
+        ta.style.position = 'fixed';
+        ta.style.opacity = '0';
+        document.body.appendChild(ta);
+        ta.select();
+        try { document.execCommand('copy'); } catch (e) {}
+        document.body.removeChild(ta);
+        markCopied();
+      }
+    });
+  });
+
   /* Back to top */
   var backToTop = document.querySelector('.back-to-top');
   if (backToTop) {
