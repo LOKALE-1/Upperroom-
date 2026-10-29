@@ -137,6 +137,99 @@ document.addEventListener('DOMContentLoaded', function () {
     });
   });
 
+  /* Watch Live dropdown (Monday prayer) */
+  var liveMenus = Array.prototype.slice.call(document.querySelectorAll('.live-menu'));
+  function closeLive (menu) {
+    menu.classList.remove('open');
+    menu.querySelector('.live-toggle').setAttribute('aria-expanded', 'false');
+  }
+  liveMenus.forEach(function (menu) {
+    var btn = menu.querySelector('.live-toggle');
+    btn.addEventListener('click', function (e) {
+      e.stopPropagation();
+      var willOpen = !menu.classList.contains('open');
+      liveMenus.forEach(closeLive);
+      if (willOpen) {
+        menu.classList.add('open');
+        btn.setAttribute('aria-expanded', 'true');
+      }
+    });
+    menu.querySelectorAll('.live-list a').forEach(function (a) {
+      a.addEventListener('click', function () { closeLive(menu); });
+    });
+  });
+  if (liveMenus.length) {
+    document.addEventListener('click', function (e) {
+      liveMenus.forEach(function (menu) { if (!menu.contains(e.target)) closeLive(menu); });
+    });
+    document.addEventListener('keydown', function (e) {
+      if (e.key !== 'Escape') return;
+      liveMenus.forEach(function (menu) {
+        if (menu.classList.contains('open')) {
+          closeLive(menu);
+          menu.querySelector('.live-toggle').focus();
+        }
+      });
+    });
+  }
+
+  /* Live now — shown during scheduled online sessions (South African time, UTC+2).
+     Add ?live=prayer or ?live=discipleship to any URL to preview it. */
+  var LIVE_SESSIONS = [
+    { id: 'prayer', day: 1, start: '19:00', end: '20:00', title: 'Monday Prayer', links: [
+      { label: 'Facebook', href: 'https://www.facebook.com/UpperRoomSA/' },
+      { label: 'Instagram', href: 'https://www.instagram.com/upper_roomsa' },
+      { label: 'TikTok', href: 'https://www.tiktok.com/@pastorsthemtshali' }
+    ] },
+    { id: 'discipleship', day: 3, start: '19:00', end: '20:00', title: 'Discipleship Class', links: [
+      { label: 'Join on Teams', href: 'https://teams.live.com/meet/9339416535494?p=XjUZm0t5jJvsNovsEK' }
+    ] }
+  ];
+  function toMins (hhmm) { var p = hhmm.split(':'); return +p[0] * 60 + +p[1]; }
+  function currentLiveSession () {
+    var preview = (window.location.search.match(/[?&]live=([\w-]+)/) || [])[1];
+    if (preview) return LIVE_SESSIONS.filter(function (s) { return s.id === preview; })[0] || null;
+    var sast = new Date(Date.now() + 2 * 60 * 60 * 1000);
+    var day = sast.getUTCDay();
+    var mins = sast.getUTCHours() * 60 + sast.getUTCMinutes();
+    return LIVE_SESSIONS.filter(function (s) {
+      return s.day === day && mins >= toMins(s.start) && mins < toMins(s.end);
+    })[0] || null;
+  }
+
+  document.querySelectorAll('.schedule-row[data-live] .schedule-day').forEach(function (el) {
+    var badge = document.createElement('span');
+    badge.className = 'live-badge';
+    badge.innerHTML = '<span class="live-dot"></span>Live now';
+    el.appendChild(badge);
+  });
+
+  var liveBar = null;
+  var liveBarId = null;
+  function renderLive () {
+    var session = currentLiveSession();
+    var id = session ? session.id : null;
+    document.querySelectorAll('.schedule-row[data-live]').forEach(function (row) {
+      row.classList.toggle('is-live', row.getAttribute('data-live') === id);
+    });
+    if (id === liveBarId) return;
+    liveBarId = id;
+    if (liveBar) { liveBar.parentNode.removeChild(liveBar); liveBar = null; }
+    document.body.classList.toggle('has-live-bar', !!session);
+    if (!session) return;
+    liveBar = document.createElement('div');
+    liveBar.className = 'live-bar';
+    liveBar.setAttribute('role', 'status');
+    var links = session.links.map(function (l) {
+      return '<a href="' + l.href + '" target="_blank" rel="noopener">' + l.label + '</a>';
+    }).join('<span class="live-bar-sep">·</span>');
+    liveBar.innerHTML = '<div class="container"><span class="live-bar-label"><span class="live-dot"></span>Live now</span>' +
+      '<span class="live-bar-title">' + session.title + '</span><span class="live-bar-links">' + links + '</span></div>';
+    document.body.insertBefore(liveBar, document.body.firstChild);
+  }
+  renderLive();
+  setInterval(renderLive, 30000);
+
   /* Back to top */
   var backToTop = document.querySelector('.back-to-top');
   if (backToTop) {
